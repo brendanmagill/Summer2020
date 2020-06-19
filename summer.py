@@ -107,7 +107,13 @@ def check_mouse_release_for_buttons(_x, _y, button_list):
         if button.pressed:
             button.on_release()
 
+# *****************************************************************************
+#                                MY CODE
+# *****************************************************************************
+
 class StartTextButton(TextButton):
+    """ Button for starting the treadmill. """
+
     def __init__(self, center_x, center_y, action_function):
         super().__init__(center_x, center_y, 100, 40, "Start", 18, "Arial")
         self.action_function = action_function
@@ -116,7 +122,42 @@ class StartTextButton(TextButton):
         super().on_release()
         self.action_function()
 
+class PauseTextButton(TextButton):
+    """ Button for pausing the treadmill. """
+
+    def __init__(self, center_x, center_y, action_function):
+        super().__init__(center_x, center_y, 100, 40, "Pause", 18, "Arial")
+        self.action_function = action_function
+
+    def on_release(self):
+        super().on_release()
+        self.action_function()
+
+class ResumeTextButton(TextButton):
+    """ Button for resuming the treadmill. """
+
+    def __init__(self, center_x, center_y, action_function):
+        super().__init__(center_x, center_y, 100, 40, "Resume", 18, "Arial")
+        self.action_function = action_function
+
+    def on_release(self):
+        super().on_release()
+        self.action_function()
+
+class StopTextButton(TextButton):
+    """ Button for stopping the treadmill. """
+
+    def __init__(self, center_x, center_y, action_function):
+        super().__init__(center_x, center_y, 100, 40, "Stop", 18, "Arial")
+        self.action_function = action_function
+
+    def on_release(self):
+        super().on_release()
+        self.action_function()
+
 class SpdUpTextButton(TextButton):
+    """Button for increasing the treadmill's speed. """
+
     def __init__(self, center_x, center_y, action_function):
         super().__init__(center_x, center_y, 50, 20, "Up", 10, "Arial")
         self.action_function = action_function
@@ -126,6 +167,8 @@ class SpdUpTextButton(TextButton):
         self.action_function()
 
 class SpdDownTextButton(TextButton):
+    """Button for decreasing the treadmill's speed. """
+
     def __init__(self, center_x, center_y, action_function):
         super().__init__(center_x, center_y, 50, 20, "Down", 10, "Arial")
         self.action_function = action_function
@@ -134,32 +177,75 @@ class SpdDownTextButton(TextButton):
         super().on_release()
         self.action_function()
 
+class StopView(arcade.View):
+    """ View to display after the treadmill is stopped. """
 
-class Game(arcade.Window):
+    def __init__(self, time, distance):
+        super().__init__()
+        self.total_time = time
+        self.distance = distance
+
+    def on_draw(self):
+        """ Draw the view """
+
+        arcade.start_render()
+
+        minutes = int(self.total_time) // 60
+        seconds = int(self.total_time) % 60
+
+        time_out = f"You ran for {minutes:02d}:{seconds:02d}"
+        arcade.draw_text(time_out, 350, 400, arcade.color.BLACK, 30)
+
+        distance_out = f"You ran {self.distance:.2f} miles"
+        arcade.draw_text(distance_out, 350, 300, arcade.color.BLACK, 30)
+
+        pace = self.total_time / self.distance
+        pace_minutes = int(pace) // 60
+        pace_seconds = int(pace) % 60
+
+        pace_out = f"Average pace: {pace_minutes:02d}:{pace_seconds:02d}"
+        arcade.draw_text(pace_out, 340, 200, arcade.color.BLACK, 30)
+
+class Game(arcade.View):
+    """ The main interface view. """
+
     def __init__(self):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__()
+
         self.total_time = 0.0
         self.is_started = False
+        self.is_paused = False
 
     def setup(self):
-        """
-        Set up the application.
-        """
+        """ Set up the window. """
+
         arcade.set_background_color(arcade.color.DAVY_GREY)
-        start_button = StartTextButton(450, 550, self.start_time)
+
+        start_button = StartTextButton(330, 550, self.start_time)
         self.button_list.append(start_button)
+
+        pause_button = PauseTextButton(450, 550, self.pause)
+        self.button_list.append(pause_button)
+
+        resume_button = ResumeTextButton(450, 500, self.resume)
+        self.button_list.append(resume_button)
+
+        stop_button = StopTextButton(570, 550, self.stop)
+        self.button_list.append(stop_button)
 
         up_button = SpdUpTextButton(430, 334, self.faster)
         self.button_list.append(up_button)
+
         down_button = SpdDownTextButton(430, 304, self.slower)
         self.button_list.append(down_button)
+
         self.total_time = 0.0
         self.speed = 0.0
         self.pace_secs = 0
         self.distance = 0
 
     def on_draw(self):
-        """ Use this function to draw everything to the screen. """
+        """ Draws the view. """
 
 # *****************************************************************************
 #       SOURCE:      https://arcade.academy/examples/timer.html
@@ -188,6 +274,7 @@ class Game(arcade.Window):
 
         pace_minutes = int(self.pace_secs) // 60
         pace_seconds = int(self.pace_secs) % 60
+
         pace_out = f"Pace: {pace_minutes:02d}:{pace_seconds:02d}"
         arcade.draw_text(pace_out, 475, 300, arcade.color.BLACK, 30)
 
@@ -197,48 +284,67 @@ class Game(arcade.Window):
         for button in self.button_list:
             button.draw()
 
+
     def start_time(self):
+        """ Starts the treadmill at the default speed. """
+
         self.is_started = True
         self.speed = 5.0
         self.pace_secs = 3600 / self.speed
 
+    def pause(self):
+        if self.is_started:
+            self.is_paused = True
+
+    def resume(self):
+        self.is_paused = False
+
+    def stop(self):
+        """ Stops the treadmill and displays the final view. """
+
+        if self.is_started:
+            self.is_started = False
+            view = StopView(self.total_time, self.distance)
+            self.window.show_view(view)
+
+
     def faster(self):
+        """ Increases the speed, up to the maximum. """
+
         if self.speed_out != "Speed: 13.0" and self.is_started:
             self.speed += 0.1
 
     def slower(self):
+        """ Decreases the speed, down to the minimum. """
+
         if self.speed_out != "Speed: 5.0" and self.is_started:
             self.speed -= 0.1
 
     def on_update(self, delta_time):
-        """
-        All the logic to move, and the game logic goes here.
-        """
-        if self.is_started:
+        """ Updates the time, pace, and distance. """
+        if self.is_started and not self.is_paused:
             self.total_time += delta_time
             self.pace_secs = 3600 / self.speed
             self.distance += (self.speed * delta_time) / 3600
 
-# *****************************************************************************
-#                                DOCUMENTATION????
-# *****************************************************************************
-
 
     def on_mouse_press(self, x, y, button, key_modifiers):
-        """
-        Called when the user presses a mouse button.
-        """
+        """ Called when a button is pressed. """
+
         check_mouse_press_for_buttons(x, y, self.button_list)
 
     def on_mouse_release(self, x, y, button, key_modifiers):
-        """
-        Called when a user releases a mouse button.
-        """
+        """ Called when a button is released. """
+
         check_mouse_release_for_buttons(x, y, self.button_list)
 
 def main():
-    window = Game()
-    window.setup()
+    """Runs the interface. """
+
+    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    main_view = Game()
+    window.show_view(main_view)
+    main_view.setup()
     arcade.run()
 
 if __name__ == '__main__':
